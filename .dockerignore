@@ -1,0 +1,5 @@
+/.idea/
+/.git/
+/docker/
+/.dockerignore
+/docker-composer.yml

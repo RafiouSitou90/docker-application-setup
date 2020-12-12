@@ -1,0 +1,93 @@
+version: "3.7"
+services:
+
+    db:
+        image: mysql:8
+        container_name: db_project
+        restart: always
+        volumes:
+            - db-data:/var/lib/mysql
+        command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+        environment:
+            MYSQL_USER: root
+            MYSQL_ROOT_PASSWORD: secret
+            MYSQL_PASSWORD: secret
+        networks:
+            - dev
+
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        container_name: phpmyadmin_project
+        restart: always
+        depends_on:
+            - db
+        ports:
+            - "8080:80"
+        environment:
+            PMA_HOST: db
+        networks:
+            - dev
+
+    web:
+        build: docker/php
+        container_name: web_project
+        ports:
+            - "8000:80"
+        volumes:
+            - ./docker/apache/vhosts:/etc/apache2/sites-enabled
+            - ./:/var/www:delegated
+        depends_on:
+            - db
+        restart: always
+        networks:
+            - dev
+
+    mailhog:
+        image: mailhog/mailhog
+        container_name: mailhog_project
+        ports:
+            - "1080:8025"
+        restart: always
+        networks:
+            - dev
+
+    redis:
+        image: redis:6-alpine
+        container_name: redis_project
+        ports:
+            - "6379:6379"
+        networks:
+            - dev
+
+    rediscommander:
+        image: rediscommander/redis-commander
+        container_name: rediscommander_project
+        restart: always
+        environment:
+            - REDIS_HOSTS=local:redis:6379
+        ports:
+            - "8081:8081"
+        networks:
+            - dev
+
+    messenger:
+        build: docker/php
+        container_name: messenger_project
+        volumes:
+            - .:/var/www
+        depends_on:
+            - db
+        restart: unless-stopped
+        command: ['php', 'bin/console', 'messenger:consume', 'async', '--limit=10', '-vv']
+        environment:
+            MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
+            MESSENGER_TRANSPORT_FAILED_DSN: redis://redis:6379/messages_failed
+        networks:
+            - dev
+
+networks:
+    dev:
+
+volumes:
+    db-data:
+        driver: local
