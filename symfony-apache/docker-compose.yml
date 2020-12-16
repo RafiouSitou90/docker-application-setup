@@ -1,0 +1,55 @@
+version: "3.8"
+
+services:
+
+    database:
+        image: mysql
+        container_name: database_docker_symfony
+        restart: always
+        ports:
+            - "3306:3306"
+        volumes:
+            - db-data:/var/lib/mysql
+        environment:
+            MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+        networks:
+            - dev
+
+    phpmyadmin:
+        image: phpmyadmin
+        container_name: phpmyadmin_docker_symfony
+        restart: always
+        depends_on:
+            - database
+        ports:
+            - 8080:80
+        environment:
+            PMA_HOST: database
+        networks:
+            - dev
+
+    mailhog:
+        image: mailhog/mailhog
+        container_name: mailhog_docker_symfony
+        ports:
+            - "1080:8025"
+        networks:
+            - dev
+
+    www:
+        build: ./php
+        container_name: www_docker_symfony
+        ports:
+            - "8000:80"
+        volumes:
+            - ./apache/vhosts:/etc/apache2/sites-enabled
+            - ./project:/var/www/project
+        restart: always
+        networks:
+            - dev
+
+networks:
+    dev:
+
+volumes:
+    db-data:
